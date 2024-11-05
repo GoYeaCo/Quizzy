@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quizzy - Les Quizzs à portée de main!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        body {
+            background-color: #222;
+            color: #fff;
+            line-height: 1.6;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem;
+            background-color: #333;
+            border-bottom: 4px solid #0f0;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #0f0;
+            text-shadow: 4px 4px #000;
+            margin-bottom: 2rem;
+        }
+
+        .pixel-button {
+            background: #0f0;
+            border: none;
+            padding: 1rem 2rem;
+            color: #000;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin: 0.5rem;
+            border: 4px solid #000;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .pixel-button:hover {
+            background: #000;
+            color: #0f0;
+            border-color: #0f0;
+        }
+
+        #content {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1rem;
+        }
+
+        .quiz-form {
+            background: #333;
+            padding: 2rem;
+            border: 4px solid #0f0;
+        }
+
+        .quiz-form input, .quiz-form textarea {
+            width: 100%;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            background: #222;
+            border: 2px solid #0f0;
+            color: #fff;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .question-container {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #444;
+            border: 2px solid #0f0;
+        }
+
+        .quiz-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .quiz-card {
+            background: #333;
+            padding: 1rem;
+            border: 4px solid #0f0;
+            text-align: center;
+        }
+
+        .score {
+            font-size: 2rem;
+            color: #0f0;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .auth-form {
+            background: #333;
+            padding: 2rem;
+            border: 4px solid #0f0;
+            max-width: 400px;
+            margin: 2rem auto;
+        }
+
+        .admin-controls {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .crown {
+            font-size: 2.5rem;
+            color: gold;
+            text-shadow: 2px 2px #000;
+            margin-bottom: 1rem;
+        }
+
+        .top-player {
+            font-size: 1.5rem;
+            color: #0f0;
+            text-shadow: 2px 2px #000;
+            padding: 1rem;
+            background: #444;
+            border: 4px solid gold;
+            margin-bottom: 2rem;
+        }
+
+        .other-players {
+            padding: 0.5rem;
+            border-bottom: 2px solid #0f0;
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Quizzy</h1>
+        <nav>
+            <button class="pixel-button" onclick="showCreateQuiz()">Créer un Quiz</button>
+            <button class="pixel-button" onclick="showQuizList()">Jouer</button>
+            <button class="pixel-button" onclick="showLeaderboard()">Classement</button>
+            <button class="pixel-button" onclick="showRegisterForm()">Inscription</button>
+            <button class="pixel-button" id="authButton" onclick="toggleAuth()">Connexion</button>
+            <button class="pixel-button" onclick="showCredits()">Crédits</button>
+        </nav>                       
+    </header>
+
+    <main id="content"></main>
+
+    <script>
+        let quizzes = [];
+        let currentQuiz = null;
+        let currentScore = 0;
+        let currentUser = null;
+        
+        const adminUser = {
+            username: "admin",
+            password: "admin123"
+        };
+
+        if (localStorage.getItem('quizzes')) {
+            quizzes = JSON.parse(localStorage.getItem('quizzes'));
+        }
+
+        function showCreateQuiz() {
+            if (!currentUser) {
+                alert('Vous devez être connecté pour créer un quiz!');
+                return;
+            }
+            
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="quiz-form">
+                    <h2>Créer un nouveau Quiz</h2>
+                    <form onsubmit="saveQuiz(event)">
+                        <input type="text" id="quizTitle" placeholder="Titre du quiz" required>
+                        <div id="questions">
+                            <div class="question-container">
+                                <input type="text" placeholder="Question 1" required>
+                                <input type="text" placeholder="Réponse 1" required>
+                                <input type="text" placeholder="Réponse 2" required>
+                                <input type="text" placeholder="Réponse 3" required>
+                                <input type="number" placeholder="Numéro de la bonne réponse (1-3)" min="1" max="3" required>
+                            </div>
+                        </div>
+                        <button type="button" class="pixel-button" onclick="addQuestion()">+ Question</button>
+                        <button type="submit" class="pixel-button">Sauvegarder le Quiz</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        function addQuestion() {
+            const questions = document.getElementById('questions');
+            const questionCount = questions.children.length + 1;
+            const newQuestion = document.createElement('div');
+            newQuestion.className = 'question-container';
+            newQuestion.innerHTML = `
+                <input type="text" placeholder="Question ${questionCount}" required>
+                <input type="text" placeholder="Réponse 1" required>
+                <input type="text" placeholder="Réponse 2" required>
+                <input type="text" placeholder="Réponse 3" required>
+                <input type="number" placeholder="Numéro de la bonne réponse (1-3)" min="1" max="3" required>
+            `;
+            questions.appendChild(newQuestion);
+        }
+
+        function saveQuiz(event) {
+            event.preventDefault();
+            const title = document.getElementById('quizTitle').value;
+            const questionContainers = document.querySelectorAll('.question-container');
+            const questions = [];
+
+            questionContainers.forEach(container => {
+                const inputs = container.getElementsByTagName('input');
+                questions.push({
+                    question: inputs[0].value,
+                    answers: [inputs[1].value, inputs[2].value, inputs[3].value],
+                    correctAnswer: parseInt(inputs[4].value) - 1
+                });
+            });
+
+            const quiz = {
+                id: Date.now(),
+                title: title,
+                questions: questions,
+                highScores: [],
+                author: currentUser.username
+            };
+
+            quizzes.push(quiz);
+            localStorage.setItem('quizzes', JSON.stringify(quizzes));
+            showQuizList();
+        }
+
+        function showQuizList() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="quiz-list">
+                    ${quizzes.map(quiz => `
+                        <div class="quiz-card">
+                            <h3>${quiz.title}</h3>
+                            <p>${quiz.questions.length} questions</p>
+                            <p>Créé par: ${quiz.author || 'Anonyme'}</p>
+                            <button class="pixel-button" onclick="startQuiz(${quiz.id})">Jouer</button>
+                            ${(currentUser && (currentUser.username === quiz.author || currentUser.username === adminUser.username)) ? `
+                                <div class="admin-controls">
+                                    <button class="pixel-button" onclick="editQuiz(${quiz.id})">Modifier</button>
+                                    <button class="pixel-button" onclick="deleteQuiz(${quiz.id})">Supprimer</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function startQuiz(quizId) {
+            currentQuiz = quizzes.find(q => q.id === quizId);
+            currentScore = 0;
+            showQuestion(0);
+        }
+
+        function showQuestion(index) {
+            if (index >= currentQuiz.questions.length) {
+                endQuiz();
+                return;
+            }
+
+            const question = currentQuiz.questions[index];
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="quiz-form">
+                    <h2>${question.question}</h2>
+                    ${question.answers.map((answer, i) => `
+                        <button class="pixel-button" onclick="checkAnswer(${index}, ${i})">${answer}</button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function checkAnswer(questionIndex, answerIndex) {
+            const correct = currentQuiz.questions[questionIndex].correctAnswer === answerIndex;
+            if (correct) currentScore++;
+            showQuestion(questionIndex + 1);
+        }
+
+        function endQuiz() {
+            const content = document.getElementById('content');
+            const percentage = (currentScore / currentQuiz.questions.length) * 100;
+            
+            currentQuiz.highScores.push({
+                score: currentScore,
+                date: new Date().toLocaleDateString()
+            });
+            localStorage.setItem('quizzes', JSON.stringify(quizzes));
+
+            content.innerHTML = `
+                <div class="quiz-form">
+                    <h2>Quiz terminé!</h2>
+                    <div class="score">Score: ${currentScore}/${currentQuiz.questions.length}</div>
+                    <p>Pourcentage: ${percentage}%</p>
+                    <button class="pixel-button" onclick="showQuizList()">Retour aux quiz</button>
+                </div>
+            `;
+        }
+
+        function showLeaderboard() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="quiz-form">
+                    <h2>Classement</h2>
+                    ${quizzes.map(quiz => `
+                        <div class="question-container">
+                            <h3>${quiz.title}</h3>
+                            ${quiz.highScores.sort((a, b) => b.score - a.score).slice(0, 5).map(score => `
+                                <p>Score: ${score.score} - ${score.date}</p>
+                            `).join('')}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function toggleAuth() {
+            if (currentUser) {
+                logout();
+            } else {
+                showLoginForm();
+            }
+        }
+
+        function showLoginForm() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="auth-form">
+                    <h2>Connexion</h2>
+                    <form onsubmit="login(event)">
+                        <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+                        <input type="password" id="password" placeholder="Mot de passe" required>
+                        <button type="submit" class="pixel-button">Se connecter</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        function login(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === adminUser.username && password === adminUser.password) {
+                currentUser = adminUser;
+                document.getElementById('authButton').textContent = 'Déconnexion';
+                showQuizList();
+            } else {
+                alert('Identifiants incorrects!');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('authButton').textContent = 'Connexion';
+            showQuizList();
+        }
+
+        function editQuiz(quizId) {
+            const quiz = quizzes.find(q => q.id === quizId);
+            if (!currentUser || (currentUser.username !== quiz.author && currentUser.username !== adminUser.username)) {
+                alert('Vous n\'avez pas les droits pour modifier ce quiz!');
+                return;
+            }
+
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="quiz-form">
+                    <h2>Modifier le Quiz</h2>
+                    <form onsubmit="updateQuiz(event, ${quizId})">
+                        <input type="text" id="quizTitle" value="${quiz.title}" required>
+                        <div id="questions">
+                            ${quiz.questions.map((q, index) => `
+                                <div class="question-container">
+                                    <input type="text" value="${q.question}" required>
+                                    <input type="text" value="${q.answers[0]}" required>
+                                    <input type="text" value="${q.answers[1]}" required>
+                                    <input type="text" value="${q.answers[2]}" required>
+                                    <input type="number" value="${q.correctAnswer + 1}" min="1" max="3" required>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" class="pixel-button" onclick="addQuestion()">+ Question</button>
+                        <button type="submit" class="pixel-button">Mettre à jour</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        function updateQuiz(event, quizId) {
+            event.preventDefault();
+            const quiz = quizzes.find(q => q.id === quizId);
+            if (!currentUser || (currentUser.username !== quiz.author && currentUser.username !== adminUser.username)) {
+                alert('Vous n\'avez pas les droits pour modifier ce quiz!');
+                return;
+            }
+
+            const title = document.getElementById('quizTitle').value;
+            const questionContainers = document.querySelectorAll('.question-container');
+            const questions = [];
+
+            questionContainers.forEach(container => {
+                const inputs = container.getElementsByTagName('input');
+                questions.push({
+                    question: inputs[0].value,
+                    answers: [inputs[1].value, inputs[2].value, inputs[3].value],
+                    correctAnswer: parseInt(inputs[4].value) - 1
+                });
+            });
+
+            quiz.title = title;
+            quiz.questions = questions;
+
+            localStorage.setItem('quizzes', JSON.stringify(quizzes));
+            showQuizList();
+        }
+
+        function deleteQuiz(quizId) {
+            const quiz = quizzes.find(q => q.id === quizId);
+            if (!currentUser || (currentUser.username !== quiz.author && currentUser.username !== adminUser.username)) {
+                alert('Vous n\'avez pas les droits pour supprimer ce quiz!');
+                return;
+            }
+
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce quiz?')) {
+                quizzes = quizzes.filter(q => q.id !== quizId);
+                localStorage.setItem('quizzes', JSON.stringify(quizzes));
+                showQuizList();
+            }
+        }
+
+        // Initialize the quiz list on page load
+        showQuizList();
+
+        function showRegisterForm() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="auth-form">
+                    <h2>Inscription</h2>
+                    <form onsubmit="register(event)">
+                        <input type="text" id="regUsername" placeholder="Nom d'utilisateur" required>
+                        <input type="password" id="regPassword" placeholder="Code d'inscription" required>
+                        <small style="color: #9E9E9E; font-size: 0.7em; display: block; margin-top: 5px;">Fourni par l'admin</small>
+                        <button type="submit" class="pixel-button">S'inscrire</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        function register(event) {
+            event.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+
+            if (password === "Raffort123") {
+                currentUser = { username: username };
+                document.getElementById('authButton').textContent = 'Déconnexion';
+                alert('Inscription réussie!');
+                showQuizList();
+            } else {
+                alert('Code d\'inscription incorrect!');
+            }
+        }
+
+        function login(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === adminUser.username && password === adminUser.password) {
+                currentUser = adminUser;
+                document.getElementById('authButton').textContent = 'Déconnexion';
+                showQuizList();
+            } else if (password === "Raffort123") {
+                currentUser = { username: username };
+                document.getElementById('authButton').textContent = 'Déconnexion';
+                showQuizList();
+            } else {
+                alert('Identifiants incorrects!');
+            }
+        }
+
+        function showCredits() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="quiz-form">
+                    <h2>Crédits</h2>
+                    <div style="text-align: center; margin: 2rem 0;">
+                        <p style="color: #0f0; font-size: 1.2rem;">Créé par Alan Nazery en un week-end</p>
+                        <p style="color: #9E9E9E; font-size: 1.2rem;">Ce site est une vertion pré-alpha, les mises à jour seront fréquentes.</p>
+                    </div>
+                    <button class="pixel-button" onclick="showQuizList()">Retour</button>
+                </div>
+            `;
+        }
+
+        // Then replace the showLeaderboard() function with this enhanced version:
+        function showLeaderboard() {
+            const content = document.getElementById('content');
+    
+            // Get all scores across all quizzes
+            const allScores = quizzes.reduce((scores, quiz) => {
+                quiz.highScores.forEach(score => {
+                    scores.push({
+                        quizTitle: quiz.title,
+                        ...score
+                    });
+                });
+                return scores;
+            }, []);
+
+            // Sort by highest score
+            const sortedScores = allScores.sort((a, b) => b.score - a.score);
+            const topPlayer = sortedScores[0];
+
+            content.innerHTML = `
+                <div class="quiz-form">
+                    <h2>Classement Global</h2>
+                    ${topPlayer ? `
+                        <div class="top-player">
+                            <div class="crown">👑</div>
+                            <div>Champion: ${topPlayer.username || 'Anonyme'}</div>
+                            <div>Score: ${topPlayer.score}</div>
+                            <div>Quiz: ${topPlayer.quizTitle}</div>
+                        </div>
+                    ` : ''}
+                    <div class="other-players">
+                        ${sortedScores.slice(1).map((score, index) => `
+                            <div class="other-players">
+                                <strong>#${index + 2}</strong> 
+                                ${score.username || 'Anonyme'} - 
+                                Score: ${score.score} 
+                                (${score.quizTitle})
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update the checkAnswer() function to include username:
+        function checkAnswer(questionIndex, answerIndex) {
+            const correct = currentQuiz.questions[questionIndex].correctAnswer === answerIndex;
+            if (correct) currentScore++;
+    
+            if (questionIndex + 1 >= currentQuiz.questions.length) {
+                currentQuiz.highScores.push({
+                    score: currentScore,
+                    username: currentUser ? currentUser.username : 'Anonyme',
+                    date: new Date().toLocaleDateString()
+                });
+                localStorage.setItem('quizzes', JSON.stringify(quizzes));
+            }
+    
+            showQuestion(questionIndex + 1);
+        }
+
+        function endQuiz() {
+            const content = document.getElementById('content');
+            const percentage = (currentScore / currentQuiz.questions.length) * 100;
+            let message = '';
+            let color = '';
+    
+            // Define score ranges and messages
+            if (percentage === 100) {
+                message = "PARFAIT! 🏆";
+                color = "#FFD700"; // Gold
+            } else if (percentage >= 80) {
+                message = "EXCELLENT! 🌟";
+                color = "#0f0"; // Green
+            } else if (percentage >= 60) {
+                message = "BIEN! ⭐";
+                color = "#00BFFF"; // Blue
+            } else if (percentage >= 40) {
+                message = "PEUT MIEUX FAIRE 📚";
+                color = "#FFA500"; // Orange
+            } else {
+                message = "À REVOIR 📖";
+                color = "#FF4500"; // Red
+            }
+    
+            // Save score with username and timestamp
+            currentQuiz.highScores.push({
+                username: currentUser ? currentUser.username : 'Anonyme',
+                score: currentScore,
+                percentage: percentage,
+                date: new Date().toLocaleDateString(),
+                timestamp: Date.now()
+            });
+    
+            localStorage.setItem('quizzes', JSON.stringify(quizzes));
+
+            content.innerHTML = `
+                <div class="quiz-form">
+                    <h2>${currentQuiz.title}</h2>
+                    <div class="score" style="color: ${color}">
+                        ${message}<br>
+                        ${currentScore}/${currentQuiz.questions.length}
+                    </div>
+                    <div style="text-align: center; margin: 20px 0;">
+                        <p style="font-size: 1.2rem; color: ${color}">${percentage.toFixed(1)}%</p>
+                        <div style="background: #333; height: 20px; border: 2px solid ${color}; margin: 10px 0;">
+                            <div style="width: ${percentage}%; background: ${color}; height: 100%;"></div>
+                        </div>
+                    </div>
+                    <button class="pixel-button" onclick="showQuizList()">Retour aux quiz</button>
+                    <button class="pixel-button" onclick="startQuiz(${currentQuiz.id})">Réessayer</button>
+                    <button class="pixel-button" onclick="showLeaderboard()">Voir le classement</button>
+                </div>
+            `;
+        }
+
+        function shouldResetScores() {
+            const lastReset = localStorage.getItem('lastScoreReset');
+            const today = new Date().toDateString();
+    
+            if (!lastReset || lastReset !== today) {
+                localStorage.setItem('lastScoreReset', today);
+                return true;
+            }
+            return false;
+        }
+
+        function resetDailyScores() {
+            quizzes.forEach(quiz => {
+                quiz.highScores = [];
+            });
+            localStorage.setItem('quizzes', JSON.stringify(quizzes));
+        }
+
+        if (localStorage.getItem('quizzes')) {
+            quizzes = JSON.parse(localStorage.getItem('quizzes'));
+            if (shouldResetScores()) {
+                resetDailyScores();
+            }
+        }
+
+        function showQuizList() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="search-container" style="margin-bottom: 2rem; text-align: center;">
+                    <input 
+                        type="text" 
+                        id="quizSearch" 
+                        placeholder="Rechercher un quiz..." 
+                        onkeyup="filterQuizzes()"
+                        style="
+                            width: 100%;
+                            max-width: 400px;
+                            padding: 1rem;
+                            background: #333;
+                            border: 2px solid #0f0;
+                            color: #fff;
+                            font-family: 'Press Start 2P', cursive;
+                            margin-bottom: 1rem;
+                        "
+                    >
+                </div>
+                <div class="quiz-list" id="quizListContainer">
+                    ${quizzes.map(quiz => `
+                        <div class="quiz-card">
+                            <h3>${quiz.title}</h3>
+                            <p>${quiz.questions.length} questions</p>
+                            <p>Créé par: ${quiz.author || 'Anonyme'}</p>
+                            <button class="pixel-button" onclick="startQuiz(${quiz.id})">Jouer</button>
+                            ${(currentUser && (currentUser.username === quiz.author || currentUser.username === adminUser.username)) ? `
+                                <div class="admin-controls">
+                                    <button class="pixel-button" onclick="editQuiz(${quiz.id})">Modifier</button>
+                                    <button class="pixel-button" onclick="deleteQuiz(${quiz.id})">Supprimer</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function filterQuizzes() {
+            const searchTerm = document.getElementById('quizSearch').value.toLowerCase();
+            const container = document.getElementById('quizListContainer');
+    
+            container.innerHTML = quizzes
+                .filter(quiz => quiz.title.toLowerCase().includes(searchTerm))
+                .map(quiz => `
+                    <div class="quiz-card">
+                        <h3>${quiz.title}</h3>
+                        <p>${quiz.questions.length} questions</p>
+                        <p>Créé par: ${quiz.author || 'Anonyme'}</p>
+                        <button class="pixel-button" onclick="startQuiz(${quiz.id})">Jouer</button>
+                        ${(currentUser && (currentUser.username === quiz.author || currentUser.username === adminUser.username)) ? `
+                            <div class="admin-controls">
+                                <button class="pixel-button" onclick="editQuiz(${quiz.id})">Modifier</button>
+                                <button class="pixel-button" onclick="deleteQuiz(${quiz.id})">Supprimer</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+        }
+
+        function checkAnswer(questionIndex, answerIndex) {
+            const correct = currentQuiz.questions[questionIndex].correctAnswer === answerIndex;
+            if (correct) currentScore++;
+    
+            if (questionIndex + 1 >= currentQuiz.questions.length) {
+                const playerName = currentUser ? currentUser.username : 'Anonyme';
+        
+                // Find existing score for this player
+                const existingScoreIndex = currentQuiz.highScores.findIndex(
+                    score => score.username === playerName
+                );
+        
+                // Only update if it's a better score or first attempt
+                if (existingScoreIndex === -1 || currentQuiz.highScores[existingScoreIndex].score < currentScore) {
+                    if (existingScoreIndex !== -1) {
+                        currentQuiz.highScores.splice(existingScoreIndex, 1);
+                    }
+            
+                    currentQuiz.highScores.push({
+                        score: currentScore,
+                        username: playerName,
+                        date: new Date().toLocaleDateString(),
+                        timestamp: Date.now()
+                    });
+            
+                    localStorage.setItem('quizzes', JSON.stringify(quizzes));
+                }
+            }
+    
+            showQuestion(questionIndex + 1);
+        }
+
+    </script>
+</body>
+</html>
