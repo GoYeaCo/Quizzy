@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quizzy - Les Quizzs à portée de main!</title>
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <title>Quizzy</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="loading-screen">
+        <div class="pixel-loader"></div>
+    </div>    
     <header>
         <h1>Quizzy</h1>
         <nav>
@@ -21,11 +22,10 @@
             <button class="pixel-button" id="authButton" onclick="toggleAuth()">Connexion</button>
             <button class="pixel-button" onclick="showCredits()">Crédits</button>
             <button class="pixel-button" id="profileButton" onclick="showUserProfile()" style="display: none;">Profil</button>
-        </nav>                       
+            <button class="pixel-button" onclick="showFriendsList()">Amis</button>
+        </nav>
     </header>
-
     <main id="content"></main>
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="script.js"></script>
